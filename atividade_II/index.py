@@ -3,11 +3,20 @@ from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
+from fastapi.middleware.cors import CORSMiddleware  # <- IMPORTANTE
 
 app = FastAPI()
 
-# Modelo de dados
+# Middleware para permitir requisições do navegador (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Pode restringir depois
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Modelos
 class TarefaCreate(BaseModel):
     titulo: str
     descricao: Optional[str] = None
@@ -16,15 +25,15 @@ class TarefaCreate(BaseModel):
 class Tarefa(TarefaCreate):
     id: int
 
+# "Banco de dados" em memória
 tarefas: List[Tarefa] = []
-prox_id = 1 
+prox_id = 1
 
-# Listar todas as tarefas
+# Rotas da API
 @app.get("/tarefas", response_model=List[Tarefa])
 def listar_tarefas():
     return tarefas
 
-# Criar nova tarefa
 @app.post("/tarefas", response_model=Tarefa)
 def criar_tarefa(tarefa: TarefaCreate):
     global prox_id
@@ -56,6 +65,7 @@ def deletar_tarefa(tarefa_id: int):
             return {"mensagem": "Tarefa deletada com sucesso."}
     raise HTTPException(status_code=404, detail="Tarefa não encontrada.")
 
+# Servir frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
