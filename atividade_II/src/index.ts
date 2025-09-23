@@ -2,15 +2,13 @@ import "reflect-metadata";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import bcrypt from "bcrypt";         
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { authenticator } from "otplib"; // substitui pyotp
+import { authenticator } from "otplib";
 import path from "path";
 import { AppDataSource } from "./data-source";
-import { Usuario } from "./entities/Usuario";
+import { Usuario, NivelAcesso } from "./entities/Usuario";
 import { Tarefa } from "./entities/Tarefas";
-import "reflect-metadata";
-
 
 const app = express();
 
@@ -31,7 +29,9 @@ AppDataSource.initialize()
 
 const JWT_SECRET = "segredo_super_secreto";
 
-// Middleware para autenticar JWT
+// ========================
+// Middleware de autenticação
+// ========================
 function autenticarToken(req: any, res: any, next: any) {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
@@ -44,24 +44,40 @@ function autenticarToken(req: any, res: any, next: any) {
     });
 }
 
+// ========================
+// Middleware de autorização por nível
+// ========================
+function autorizarNivel(...niveisPermitidos: NivelAcesso[]) {
+    return (req: any, res: Response, next: Function) => {
+        const nivelUsuario = req.user?.nivelAcesso;
+        if (!niveisPermitidos.includes(nivelUsuario)) {
+            return res.status(403).json({ msg: "Acesso negado: permissão insuficiente" });
+        }
+        next();
+    };
+}
+
+// ========================
 // Rotas de usuário
+// ========================
 app.post("/registro", async (req: Request, res: Response) => {
-    const { username, senha } = req.body;
+    const { username, senha, nivelAcesso } = req.body;
     const repo = AppDataSource.getRepository(Usuario);
 
     if (await repo.findOne({ where: { username } })) {
         return res.status(400).json({ msg: "Usuário já existe" });
     }
 
-    const secret2FA = authenticator.generateSecret(); // gera segredo 2FA
+    const secret2FA = authenticator.generateSecret();
     const usuario = repo.create({
         username,
         senhaHash: await bcrypt.hash(senha, 10),
         secret2FA,
+        nivelAcesso: nivelAcesso || NivelAcesso.VISUALIZACAO
     });
     await repo.save(usuario);
 
-    res.json({ msg: "Usuário criado", secret2FA });
+    res.json({ msg: "Usuário criado com sucesso", secret2FA });
 });
 
 app.post("/login", async (req: Request, res: Response) => {
@@ -69,8 +85,7 @@ app.post("/login", async (req: Request, res: Response) => {
     const repo = AppDataSource.getRepository(Usuario);
     const user = await repo.findOne({ where: { username } });
 
-    if (!user) return res.status(401).json({ msg: "Usuário ou senha inválidos" });
-    if (!(await bcrypt.compare(senha, user.senhaHash))) {
+    if (!user || !(await bcrypt.compare(senha, user.senhaHash))) {
         return res.status(401).json({ msg: "Usuário ou senha inválidos" });
     }
 
@@ -78,50 +93,79 @@ app.post("/login", async (req: Request, res: Response) => {
         return res.status(401).json({ msg: "Token 2FA inválido" });
     }
 
-    const tokenJWT = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: "1h" });
+    const tokenJWT = jwt.sign(
+        {
+            id: user.id,
+            username: user.username,
+            nivelAcesso: user.nivelAcesso,
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+    );
+
     res.json({ token: tokenJWT });
 });
 
-// Rotas de tarefas (protegidas)
+// ========================
+// Rotas de tarefas (com autorização por nível)
+// ========================
+
 app.get("/tarefas", autenticarToken, async (req: any, res: Response) => {
     const repo = AppDataSource.getRepository(Tarefa);
     const tarefas = await repo.find({ where: { usuario: { id: req.user.id } } });
     res.json(tarefas);
 });
 
-app.post("/tarefas", autenticarToken, async (req: any, res: Response) => {
-    const { titulo, descricao } = req.body;
-    const usuarioRepo = AppDataSource.getRepository(Usuario);
-    const tarefaRepo = AppDataSource.getRepository(Tarefa);
-    const usuario = await usuarioRepo.findOne({ where: { id: req.user.id } });
-    if (!usuario) return res.status(400).json({ msg: "Usuário não encontrado" });
+app.post(
+    "/tarefas",
+    autenticarToken,
+    autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
+    async (req: any, res: Response) => {
+        const { titulo, descricao } = req.body;
+        const usuarioRepo = AppDataSource.getRepository(Usuario);
+        const tarefaRepo = AppDataSource.getRepository(Tarefa);
+        const usuario = await usuarioRepo.findOne({ where: { id: req.user.id } });
+        if (!usuario) return res.status(400).json({ msg: "Usuário não encontrado" });
 
-    const tarefa = tarefaRepo.create({ titulo, descricao, usuario });
-    await tarefaRepo.save(tarefa);
-    res.json(tarefa);
-});
+        const tarefa = tarefaRepo.create({ titulo, descricao, usuario });
+        await tarefaRepo.save(tarefa);
+        res.json(tarefa);
+    }
+);
 
-app.put("/tarefas/:id", autenticarToken, async (req: any, res: Response) => {
-    const id = parseInt(req.params.id);
-    const tarefaRepo = AppDataSource.getRepository(Tarefa);
-    const tarefa = await tarefaRepo.findOne({ where: { id, usuario: { id: req.user.id } } });
-    if (!tarefa) return res.status(404).json({ msg: "Tarefa não encontrada" });
+app.put(
+    "/tarefas/:id",
+    autenticarToken,
+    autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
+    async (req: any, res: Response) => {
+        const id = parseInt(req.params.id);
+        const tarefaRepo = AppDataSource.getRepository(Tarefa);
+        const tarefa = await tarefaRepo.findOne({ where: { id, usuario: { id: req.user.id } } });
+        if (!tarefa) return res.status(404).json({ msg: "Tarefa não encontrada" });
 
-    tarefaRepo.merge(tarefa, req.body);
-    await tarefaRepo.save(tarefa);
-    res.json(tarefa);
-});
+        tarefaRepo.merge(tarefa, req.body);
+        await tarefaRepo.save(tarefa);
+        res.json(tarefa);
+    }
+);
 
-app.delete("/tarefas/:id", autenticarToken, async (req: any, res: Response) => {
-    const id = parseInt(req.params.id);
-    const tarefaRepo = AppDataSource.getRepository(Tarefa);
-    const tarefa = await tarefaRepo.findOne({ where: { id, usuario: { id: req.user.id } } });
-    if (!tarefa) return res.status(404).json({ msg: "Tarefa não encontrada" });
+app.delete(
+    "/tarefas/:id",
+    autenticarToken,
+    autorizarNivel(NivelAcesso.ADMINISTRATIVO),
+    async (req: any, res: Response) => {
+        const id = parseInt(req.params.id);
+        const tarefaRepo = AppDataSource.getRepository(Tarefa);
+        const tarefa = await tarefaRepo.findOne({ where: { id, usuario: { id: req.user.id } } });
+        if (!tarefa) return res.status(404).json({ msg: "Tarefa não encontrada" });
 
-    await tarefaRepo.remove(tarefa);
-    res.json({ msg: "Tarefa deletada com sucesso." });
-});
+        await tarefaRepo.remove(tarefa);
+        res.json({ msg: "Tarefa deletada com sucesso." });
+    }
+);
 
+// ========================
 // Rodar servidor
+// ========================
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));

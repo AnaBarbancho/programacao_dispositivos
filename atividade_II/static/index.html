@@ -34,8 +34,17 @@
                     <label>Senha</label>
                     <input type="password" id="reg-senha" class="form-control" required>
                 </div>
+                <div class="mb-3">
+                    <label>Nível de Acesso</label>
+                    <select id="reg-nivel" class="form-control" required>
+                        <option value="visualizacao">Visualização</option>
+                        <option value="gerencial">Gerencial</option>
+                        <option value="administrativo">Administrativo</option>
+                    </select>
+                </div>
                 <button class="btn btn-primary">Registrar</button>
             </form>
+            
             <small class="text-muted">Após registrar, use o segredo 2FA no Google Authenticator</small>
             <div id="secret2FA" class="mt-2"></div>
         </div>
@@ -81,33 +90,67 @@
 const API_URL = "http://localhost:3000";
 
 let tokenJWT = null;
+let nivelAcesso = null;
 
-// Toggle forms
+// ======== Funções JWT e controle de acesso ========
+
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+}
+
+function controlarPermissoes(nivel) {
+    nivelAcesso = nivel;
+
+    const form = document.getElementById("task-form");
+
+    if (nivel === "visualizacao") {
+        form.classList.add("d-none");
+    } else {
+        form.classList.remove("d-none");
+    }
+}
+
+// ======== Botões de interface ========
+
 document.getElementById("btn-login").onclick = () => {
     document.getElementById("login-form").classList.remove("d-none");
     document.getElementById("register-form").classList.add("d-none");
 };
+
 document.getElementById("btn-register").onclick = () => {
     document.getElementById("register-form").classList.remove("d-none");
     document.getElementById("login-form").classList.add("d-none");
 };
+
 document.getElementById("btn-logout").onclick = () => {
     tokenJWT = null;
+    nivelAcesso = null;
     document.getElementById("app-section").classList.add("d-none");
     document.getElementById("auth-section").classList.remove("d-none");
     document.getElementById("btn-logout").classList.add("d-none");
 };
 
-// Registro
+// ======== Registro ========
+
 document.getElementById("form-register").onsubmit = async (e) => {
     e.preventDefault();
     const username = document.getElementById("reg-username").value;
     const senha = document.getElementById("reg-senha").value;
+    const nivelAcesso = document.getElementById("reg-nivel").value; // 👈 pegar valor do select
 
     const res = await fetch(`${API_URL}/registro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, senha })
+        body: JSON.stringify({ username, senha, nivelAcesso }) // 👈 enviar pro backend
     });
     const data = await res.json();
     if(res.ok){
@@ -118,11 +161,13 @@ document.getElementById("form-register").onsubmit = async (e) => {
     }
 };
 
-// Login
+// ======== Login ========
+
 document.getElementById("form-login").onsubmit = async (e) => {
     e.preventDefault();
-    const username = document.getElementById("login-username").value;
-    const senha = document.getElementById("login-senha").value;
+    const username = document.getElementById("reg-username").value;
+    const senha = document.getElementById("reg-senha").value;
+    const nivelAcesso = document.getElementById("reg-nivel").value;
     const token2FA = document.getElementById("login-2fa").value;
 
     const res = await fetch(`${API_URL}/login`, {
@@ -133,16 +178,22 @@ document.getElementById("form-login").onsubmit = async (e) => {
     const data = await res.json();
     if(res.ok){
         tokenJWT = data.token;
+
+        const payload = parseJwt(tokenJWT);
+        controlarPermissoes(payload.nivelAcesso);
+
         document.getElementById("auth-section").classList.add("d-none");
         document.getElementById("app-section").classList.remove("d-none");
         document.getElementById("btn-logout").classList.remove("d-none");
+
         loadTasks();
     } else {
         alert(data.msg);
     }
 };
 
-// CRUD Tarefas
+// ======== Tarefas (CRUD) ========
+
 async function loadTasks() {
     const res = await fetch(`${API_URL}/tarefas`, {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
@@ -150,6 +201,7 @@ async function loadTasks() {
     const tarefas = await res.json();
     const list = document.getElementById("task-list");
     list.innerHTML = "";
+
     tarefas.forEach(t => {
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
@@ -159,8 +211,12 @@ async function loadTasks() {
                 ${t.concluida ? "✅" : ""}
             </div>
             <div>
-                <button class="btn btn-sm btn-success" onclick="toggleComplete(${t.id}, ${t.concluida})">✔️</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
+                ${nivelAcesso !== "visualizacao" ? `
+                    <button class="btn btn-sm btn-success" onclick="toggleComplete(${t.id}, ${t.concluida})">✔️</button>
+                ` : ""}
+                ${nivelAcesso === "administrativo" ? `
+                    <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
+                ` : ""}
             </div>
         `;
         list.appendChild(li);

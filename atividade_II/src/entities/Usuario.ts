@@ -1,5 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
+export enum NivelAcesso {
+    ADMINISTRATIVO = "administrativo",
+    GERENCIAL = "gerencial",
+    VISUALIZACAO = "visualizacao"
+}
+
 @Entity()
 export class Usuario {
     @PrimaryGeneratedColumn()
@@ -13,4 +19,12 @@ export class Usuario {
 
     @Column()
     secret2FA!: string;
+
+    @Column({
+        type: "enum",
+        enum: NivelAcesso,
+        default: NivelAcesso.VISUALIZACAO
+    })
+    nivelAcesso!: NivelAcesso;
+    tarefas: any;
 }
