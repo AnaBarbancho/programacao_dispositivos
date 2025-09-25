@@ -5,12 +5,206 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TaskManager 2FA</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --success-color: #4cc9f0;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fb;
+            color: var(--dark-color);
+        }
+        
+        /* Landing Page Styles */
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+            margin-top: 56px;
+        }
+        
+        .feature-card {
+            transition: transform 0.3s;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+        }
+        
+        /* Kanban Styles */
+        .kanban-container {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 20px 0;
+            margin-top: 20px;
+        }
+        
+        .kanban-column {
+            flex: 1;
+            min-width: 300px;
+            background-color: #f0f2f5;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .kanban-column h5 {
+            text-align: center;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .kanban-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .kanban-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .kanban-card h6 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .kanban-card p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .kanban-card .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .kanban-card .badge {
+            font-size: 0.7rem;
+        }
+        
+        /* Navigation */
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: var(--primary-color) !important;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        /* Auth Forms */
+        .auth-card {
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        
+        .auth-card .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+        
+        /* Estilo para o formulário de edição */
+        .edit-form {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .edit-form .form-control {
+            margin-bottom: 10px;
+        }
+        
+        .edit-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .kanban-container {
+                flex-direction: column;
+            }
+            
+            .kanban-column {
+                min-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
 
 <header class="fixed-top bg-light shadow-sm">
     <nav class="container d-flex justify-content-between align-items-center py-2">
-        <a class="navbar-brand" href="#">TaskManager</a>
+        <a class="navbar-brand" href="#"><i class="fas fa-tasks me-2"></i>TaskManager</a>
         <div>
             <button id="btn-login" class="btn btn-outline-primary me-2">Login</button>
             <button id="btn-register" class="btn btn-primary">Registrar</button>
@@ -19,78 +213,231 @@
     </nav>
 </header>
 
+<!-- Landing Page Content -->
+<section id="landing-section">
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="display-4 fw-bold">Gerencie suas tarefas com segurança</h1>
+            <p class="lead">TaskManager oferece autenticação de dois fatores para proteger suas informações</p>
+            <button id="btn-get-started" class="btn btn-light btn-lg mt-3">Começar Agora</button>
+        </div>
+    </div>
+    
+    <div class="container my-5 py-5">
+        <h2 class="text-center section-title">Por que escolher o TaskManager?</h2>
+        <div class="row g-4 mt-4">
+            <div class="col-md-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h5>Segurança Máxima</h5>
+                        <p>Autenticação de dois fatores para proteger suas tarefas e informações pessoais.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-columns"></i>
+                        </div>
+                        <h5>Visualização Kanban</h5>
+                        <p>Organize suas tarefas em colunas visuais para melhor acompanhamento do progresso.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-lock"></i>
+                        </div>
+                        <h5>Controle de Acesso</h5>
+                        <p>Diferentes níveis de permissão para equipes: visualização, gerencial e administrativo.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <main class="container mt-5 pt-5">
 
     <!-- Login / Registro -->
-    <div id="auth-section" class="my-5">
-        <div id="register-form" class="card p-4 mb-4 d-none">
-            <h3>Registrar</h3>
-            <form id="form-register">
-                <div class="mb-3">
-                    <label>Usuário</label>
-                    <input type="text" id="reg-username" class="form-control" required>
+    <div id="auth-section" class="my-5 d-none">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div id="register-form" class="card auth-card d-none">
+                    <div class="card-header py-3">
+                        <h4 class="mb-0">Criar Nova Conta</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="form-register">
+                            <div class="mb-3">
+                                <label class="form-label">Usuário</label>
+                                <input type="text" id="reg-username" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <input type="password" id="reg-senha" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nível de Acesso</label>
+                                <select id="reg-nivel" class="form-control" required>
+                                    <option value="visualizacao">Visualização</option>
+                                    <option value="gerencial">Gerencial</option>
+                                    <option value="administrativo">Administrativo</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary w-100 py-2">Registrar</button>
+                        </form>
+                        
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <small class="text-muted">Após registrar, use o segredo 2FA no Google Authenticator</small>
+                            <div id="secret2FA" class="mt-2 fw-bold"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label>Senha</label>
-                    <input type="password" id="reg-senha" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label>Nível de Acesso</label>
-                    <select id="reg-nivel" class="form-control" required>
-                        <option value="visualizacao">Visualização</option>
-                        <option value="gerencial">Gerencial</option>
-                        <option value="administrativo">Administrativo</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary">Registrar</button>
-            </form>
-            
-            <small class="text-muted">Após registrar, use o segredo 2FA no Google Authenticator</small>
-            <div id="secret2FA" class="mt-2"></div>
-        </div>
 
-        <div id="login-form" class="card p-4 d-none">
-            <h3>Login</h3>
-            <form id="form-login">
-                <div class="mb-3">
-                    <label>Usuário</label>
-                    <input type="text" id="login-username" class="form-control" required>
+                <div id="login-form" class="card auth-card d-none">
+                    <div class="card-header py-3">
+                        <h4 class="mb-0">Acessar Sua Conta</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="form-login">
+                            <div class="mb-3">
+                                <label class="form-label">Usuário</label>
+                                <input type="text" id="login-username" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <input type="password" id="login-senha" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Token 2FA</label>
+                                <input type="text" id="login-2fa" class="form-control" required>
+                            </div>
+                            <button class="btn btn-primary w-100 py-2">Login</button>
+                        </form>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label>Senha</label>
-                    <input type="password" id="login-senha" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label>Token 2FA</label>
-                    <input type="text" id="login-2fa" class="form-control" required>
-                </div>
-                <button class="btn btn-primary">Login</button>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Seção de tarefas (apenas logado) -->
     <div id="app-section" class="d-none">
-        <h2>Suas Tarefas</h2>
-        <form id="task-form" class="mb-3">
-            <input type="text" id="titulo" placeholder="Título" class="form-control mb-2" required>
-            <textarea id="descricao" placeholder="Descrição" class="form-control mb-2"></textarea>
-            <div class="form-check mb-2">
-                <input type="checkbox" id="concluida" class="form-check-input">
-                <label for="concluida" class="form-check-label">Concluída</label>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-tasks me-2"></i>Suas Tarefas</h2>
+            <div>
+                <span class="badge bg-primary me-2">Nível: <span id="user-level"></span></span>
+                <button id="btn-add-task" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Nova Tarefa
+                </button>
             </div>
-            <button class="btn btn-primary">Adicionar Tarefa</button>
-        </form>
-        <ul id="task-list" class="list-group"></ul>
+        </div>
+        
+        <div id="task-form-container" class="card p-4 mb-4">
+            <h5>Adicionar Nova Tarefa</h5>
+            <form id="task-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <input type="text" id="titulo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select id="status" class="form-control">
+                                <option value="pendente">Pendente</option>
+                                <option value="andamento">Em Andamento</option>
+                                <option value="concluida">Concluída</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <textarea id="descricao" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input type="checkbox" id="concluida" class="form-check-input">
+                        <label for="concluida" class="form-check-label">Marcar como concluída</label>
+                    </div>
+                    <div>
+                        <button type="button" id="btn-cancel-task" class="btn btn-outline-secondary me-2">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Adicionar Tarefa</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Kanban Board -->
+        <div class="kanban-container">
+            <div class="kanban-column">
+                <h5><i class="fas fa-clock me-2"></i>Pendentes</h5>
+                <div id="column-pendente" class="kanban-column-content">
+                    <!-- Tarefas pendentes serão inseridas aqui -->
+                </div>
+            </div>
+            
+            <div class="kanban-column">
+                <h5><i class="fas fa-spinner me-2"></i>Em Andamento</h5>
+                <div id="column-andamento" class="kanban-column-content">
+                    <!-- Tarefas em andamento serão inseridas aqui -->
+                </div>
+            </div>
+            
+            <div class="kanban-column">
+                <h5><i class="fas fa-check-circle me-2"></i>Concluídas</h5>
+                <div id="column-concluida" class="kanban-column-content">
+                    <!-- Tarefas concluídas serão inseridas aqui -->
+                </div>
+            </div>
+        </div>
     </div>
 
 </main>
+
+<footer class="bg-dark text-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h5><i class="fas fa-tasks me-2"></i>TaskManager</h5>
+                <p>Gerencie suas tarefas com segurança e eficiência.</p>
+            </div>
+            <div class="col-md-4">
+                <h5>Links Rápidos</h5>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white">Início</a></li>
+                    <li><a href="#" class="text-white">Sobre</a></li>
+                    <li><a href="#" class="text-white">Contato</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h5>Contato</h5>
+                <p><i class="fas fa-envelope me-2"></i>contato@taskmanager.com</p>
+                <p><i class="fas fa-phone me-2"></i>(11) 99999-9999</p>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p>&copy; 2023 TaskManager. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</footer>
 
 <script>
 const API_URL = "http://localhost:3000";
 
 let tokenJWT = null;
 let nivelAcesso = null;
+let editingTaskId = null;
 
 // ======== Funções JWT e controle de acesso ========
 
@@ -109,24 +456,38 @@ function parseJwt(token) {
 
 function controlarPermissoes(nivel) {
     nivelAcesso = nivel;
+    document.getElementById('user-level').textContent = nivel;
 
-    const form = document.getElementById("task-form");
+    const formContainer = document.getElementById("task-form-container");
 
     if (nivel === "visualizacao") {
-        form.classList.add("d-none");
+        formContainer.classList.add("d-none");
+        document.getElementById('btn-add-task').classList.add('d-none');
     } else {
-        form.classList.remove("d-none");
+        formContainer.classList.remove("d-none");
+        document.getElementById('btn-add-task').classList.remove('d-none');
     }
 }
 
 // ======== Botões de interface ========
 
+document.getElementById("btn-get-started").onclick = () => {
+    document.getElementById("landing-section").classList.add("d-none");
+    document.getElementById("auth-section").classList.remove("d-none");
+    document.getElementById("register-form").classList.remove("d-none");
+    document.getElementById("login-form").classList.add("d-none");
+};
+
 document.getElementById("btn-login").onclick = () => {
+    document.getElementById("landing-section").classList.add("d-none");
+    document.getElementById("auth-section").classList.remove("d-none");
     document.getElementById("login-form").classList.remove("d-none");
     document.getElementById("register-form").classList.add("d-none");
 };
 
 document.getElementById("btn-register").onclick = () => {
+    document.getElementById("landing-section").classList.add("d-none");
+    document.getElementById("auth-section").classList.remove("d-none");
     document.getElementById("register-form").classList.remove("d-none");
     document.getElementById("login-form").classList.add("d-none");
 };
@@ -135,8 +496,21 @@ document.getElementById("btn-logout").onclick = () => {
     tokenJWT = null;
     nivelAcesso = null;
     document.getElementById("app-section").classList.add("d-none");
-    document.getElementById("auth-section").classList.remove("d-none");
+    document.getElementById("auth-section").classList.add("d-none");
+    document.getElementById("landing-section").classList.remove("d-none");
     document.getElementById("btn-logout").classList.add("d-none");
+};
+
+document.getElementById("btn-add-task").onclick = () => {
+    document.getElementById("task-form-container").classList.toggle("d-none");
+};
+
+document.getElementById("btn-cancel-task").onclick = () => {
+    document.getElementById("task-form-container").classList.add("d-none");
+    document.getElementById("titulo").value = "";
+    document.getElementById("descricao").value = "";
+    document.getElementById("concluida").checked = false;
+    document.getElementById("status").value = "pendente";
 };
 
 // ======== Registro ========
@@ -145,12 +519,12 @@ document.getElementById("form-register").onsubmit = async (e) => {
     e.preventDefault();
     const username = document.getElementById("reg-username").value;
     const senha = document.getElementById("reg-senha").value;
-    const nivelAcesso = document.getElementById("reg-nivel").value; // 👈 pegar valor do select
+    const nivelAcesso = document.getElementById("reg-nivel").value;
 
     const res = await fetch(`${API_URL}/registro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, senha, nivelAcesso }) // 👈 enviar pro backend
+        body: JSON.stringify({ username, senha, nivelAcesso })
     });
     const data = await res.json();
     if(res.ok){
@@ -165,9 +539,8 @@ document.getElementById("form-register").onsubmit = async (e) => {
 
 document.getElementById("form-login").onsubmit = async (e) => {
     e.preventDefault();
-    const username = document.getElementById("reg-username").value;
-    const senha = document.getElementById("reg-senha").value;
-    const nivelAcesso = document.getElementById("reg-nivel").value;
+    const username = document.getElementById("login-username").value;
+    const senha = document.getElementById("login-senha").value;
     const token2FA = document.getElementById("login-2fa").value;
 
     const res = await fetch(`${API_URL}/login`, {
@@ -199,35 +572,95 @@ async function loadTasks() {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
     });
     const tarefas = await res.json();
-    const list = document.getElementById("task-list");
-    list.innerHTML = "";
-
+    
+    // Limpar colunas do Kanban
+    document.getElementById('column-pendente').innerHTML = '';
+    document.getElementById('column-andamento').innerHTML = '';
+    document.getElementById('column-concluida').innerHTML = '';
+    
     tarefas.forEach(t => {
-        const li = document.createElement("li");
-        li.className = "list-group-item d-flex justify-content-between align-items-center";
-        li.innerHTML = `
-            <div>
-                <strong>${t.titulo}</strong> - ${t.descricao || ""}
-                ${t.concluida ? "✅" : ""}
-            </div>
-            <div>
-                ${nivelAcesso !== "visualizacao" ? `
-                    <button class="btn btn-sm btn-success" onclick="toggleComplete(${t.id}, ${t.concluida})">✔️</button>
-                ` : ""}
-                ${nivelAcesso === "administrativo" ? `
-                    <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
-                ` : ""}
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-id', t.id);
+        
+        // Determinar a cor da badge baseada no status
+        let badgeClass = 'bg-secondary';
+        if (t.status === 'pendente') badgeClass = 'bg-warning';
+        if (t.status === 'andamento') badgeClass = 'bg-primary';
+        if (t.status === 'concluida') badgeClass = 'bg-success';
+        
+        card.innerHTML = `
+            <h6>${t.titulo}</h6>
+            <p>${t.descricao || ""}</p>
+            <div class="card-footer">
+                <span class="badge ${badgeClass}">${t.status}</span>
+                <div>
+                    ${nivelAcesso !== "visualizacao" ? `
+                        <button class="btn btn-sm btn-outline-primary" onclick="editTask(${t.id}, '${t.titulo}', '${t.descricao}', '${t.status}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    ` : ""}
+                    ${nivelAcesso === "administrativo" ? `
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${t.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ""}
+                </div>
             </div>
         `;
-        list.appendChild(li);
+        
+        // Adicionar evento de drag para o card
+        card.addEventListener('dragstart', handleDragStart);
+        
+        // Adicionar à coluna correta
+        document.getElementById(`column-${t.status}`).appendChild(card);
     });
+    
+    // Tornar as colunas alvos de drop
+    const columns = document.querySelectorAll('.kanban-column-content');
+    columns.forEach(column => {
+        column.addEventListener('dragover', handleDragOver);
+        column.addEventListener('drop', handleDrop);
+    });
+}
+
+// Funções de drag and drop
+function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-id'));
+    e.target.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    const columnId = e.target.closest('.kanban-column-content').id;
+    const newStatus = columnId.replace('column-', '');
+    
+    updateTaskStatus(taskId, newStatus);
+}
+
+async function updateTaskStatus(taskId, newStatus) {
+    await fetch(`${API_URL}/tarefas/${taskId}`, {
+        method: "PUT",
+        headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify({ status: newStatus })
+    });
+    loadTasks();
 }
 
 document.getElementById("task-form").onsubmit = async (e) => {
     e.preventDefault();
     const titulo = document.getElementById("titulo").value;
     const descricao = document.getElementById("descricao").value;
-    const concluida = document.getElementById("concluida").checked;
+    const status = document.getElementById("status").value;
 
     const res = await fetch(`${API_URL}/tarefas`, {
         method: "POST",
@@ -235,34 +668,109 @@ document.getElementById("task-form").onsubmit = async (e) => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${tokenJWT}`
         },
-        body: JSON.stringify({ titulo, descricao, concluida })
+        body: JSON.stringify({ titulo, descricao, status })
     });
     if(res.ok){
         document.getElementById("titulo").value = "";
         document.getElementById("descricao").value = "";
-        document.getElementById("concluida").checked = false;
+        document.getElementById("status").value = "pendente";
+        document.getElementById("task-form-container").classList.add("d-none");
         loadTasks();
     }
 };
 
-async function toggleComplete(id, atual) {
-    await fetch(`${API_URL}/tarefas/${id}`, {
-        method: "PUT",
-        headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${tokenJWT}`
-        },
-        body: JSON.stringify({ concluida: !atual })
-    });
-    loadTasks();
+function editTask(id, currentTitulo, currentDescricao, currentStatus) {
+    // Se já está editando esta tarefa, cancelar a edição
+    if (editingTaskId === id) {
+        cancelEditTask(id);
+        return;
+    }
+    
+    // Se está editando outra tarefa, cancelar primeiro
+    if (editingTaskId) {
+        cancelEditTask(editingTaskId);
+    }
+    
+    // Encontrar o card da tarefa
+    const taskCard = document.querySelector(`.kanban-card[data-id="${id}"]`);
+    
+    // Criar formulário de edição
+    const editForm = document.createElement('div');
+    editForm.className = 'edit-form';
+    editForm.id = `edit-form-${id}`;
+    editForm.innerHTML = `
+        <div class="mb-2">
+            <label class="form-label small">Título</label>
+            <input type="text" class="form-control form-control-sm" id="edit-titulo-${id}" value="${currentTitulo}" required>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small">Descrição</label>
+            <textarea class="form-control form-control-sm" id="edit-descricao-${id}" rows="2">${currentDescricao || ''}</textarea>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small">Status</label>
+            <select class="form-control form-control-sm" id="edit-status-${id}">
+                <option value="pendente" ${currentStatus === 'pendente' ? 'selected' : ''}>Pendente</option>
+                <option value="andamento" ${currentStatus === 'andamento' ? 'selected' : ''}>Em Andamento</option>
+                <option value="concluida" ${currentStatus === 'concluida' ? 'selected' : ''}>Concluída</option>
+            </select>
+        </div>
+        <div class="edit-form-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditTask(${id})">Cancelar</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="saveTask(${id})">Salvar</button>
+        </div>
+    `;
+    
+    // Adicionar formulário ao card
+    taskCard.appendChild(editForm);
+    
+    // Atualizar o ID da tarefa sendo editada
+    editingTaskId = id;
+}
+
+function cancelEditTask(id) {
+    const editForm = document.getElementById(`edit-form-${id}`);
+    if (editForm) {
+        editForm.remove();
+    }
+    
+    // Se estamos cancelando a tarefa atualmente em edição, limpar o ID
+    if (editingTaskId === id) {
+        editingTaskId = null;
+    }
+}
+
+async function saveTask(id) {
+    const titulo = document.getElementById(`edit-titulo-${id}`).value;
+    const descricao = document.getElementById(`edit-descricao-${id}`).value;
+    const status = document.getElementById(`edit-status-${id}`).value;
+
+    if (titulo && status) {
+        await fetch(`${API_URL}/tarefas/${id}`, {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${tokenJWT}`
+            },
+            body: JSON.stringify({ titulo, descricao, status })
+        });
+        
+        // Limpar o ID da tarefa sendo editada
+        editingTaskId = null;
+        
+        // Recarregar as tarefas
+        loadTasks();
+    }
 }
 
 async function deleteTask(id) {
-    await fetch(`${API_URL}/tarefas/${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${tokenJWT}` }
-    });
-    loadTasks();
+    if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
+        await fetch(`${API_URL}/tarefas/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${tokenJWT}` }
+        });
+        loadTasks();
+    }
 }
 </script>
 

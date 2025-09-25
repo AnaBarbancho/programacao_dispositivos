@@ -121,17 +121,25 @@ app.post(
     autenticarToken,
     autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
     async (req: any, res: Response) => {
-        const { titulo, descricao } = req.body;
+        const { titulo, descricao, status } = req.body; // <-- agora inclui status
         const usuarioRepo = AppDataSource.getRepository(Usuario);
         const tarefaRepo = AppDataSource.getRepository(Tarefa);
+
         const usuario = await usuarioRepo.findOne({ where: { id: req.user.id } });
         if (!usuario) return res.status(400).json({ msg: "Usuário não encontrado" });
 
-        const tarefa = tarefaRepo.create({ titulo, descricao, usuario });
+        const tarefa = tarefaRepo.create({
+            titulo,
+            descricao,
+            status: status || "pendente", // <-- default se não informado
+            usuario
+        });
+
         await tarefaRepo.save(tarefa);
         res.json(tarefa);
     }
 );
+
 
 app.put(
     "/tarefas/:id",
@@ -139,15 +147,32 @@ app.put(
     autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
     async (req: any, res: Response) => {
         const id = parseInt(req.params.id);
-        const tarefaRepo = AppDataSource.getRepository(Tarefa);
-        const tarefa = await tarefaRepo.findOne({ where: { id, usuario: { id: req.user.id } } });
-        if (!tarefa) return res.status(404).json({ msg: "Tarefa não encontrada" });
+        const { titulo, descricao, status } = req.body; // <-- pegamos status também
 
-        tarefaRepo.merge(tarefa, req.body);
+        const tarefaRepo = AppDataSource.getRepository(Tarefa);
+        const tarefa = await tarefaRepo.findOne({
+            where: { id, usuario: { id: req.user.id } },
+        });
+
+        if (!tarefa) {
+            return res.status(404).json({ msg: "Tarefa não encontrada" });
+        }
+
+        // Atualiza apenas os campos enviados
+        if (titulo !== undefined) tarefa.titulo = titulo;
+        if (descricao !== undefined) tarefa.descricao = descricao;
+        if (status !== undefined) {
+            if (!["pendente", "andamento", "concluida"].includes(status)) {
+                return res.status(400).json({ msg: "Status inválido" });
+            }
+            tarefa.status = status;
+        }
+
         await tarefaRepo.save(tarefa);
         res.json(tarefa);
     }
 );
+
 
 app.delete(
     "/tarefas/:id",

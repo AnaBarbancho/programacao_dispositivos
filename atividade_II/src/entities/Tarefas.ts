@@ -1,4 +1,3 @@
-
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
 import { Usuario } from "./Usuario";
 
@@ -10,12 +9,16 @@ export class Tarefa {
     @Column()
     titulo!: string;
 
-    @Column()
+    @Column({ nullable: true })
     descricao?: string;
 
-    @Column({ default: false })
-    concluida!: boolean;
+    @Column({
+        type: "enum",
+        enum: ["pendente", "andamento", "concluida"],
+        default: "pendente"
+    })
+    status!: "pendente" | "andamento" | "concluida";
 
-    @ManyToOne(() => Usuario, (usuario) => usuario.tarefas)
+    @ManyToOne(() => Usuario, (usuario) => usuario.tarefas, { onDelete: "CASCADE" })
     usuario!: Usuario;
 }
