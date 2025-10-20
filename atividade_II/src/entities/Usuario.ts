@@ -21,10 +21,11 @@ export class Usuario {
     secret2FA!: string;
 
     @Column({
-        type: "enum",
+        type: "simple-enum", // compatível com SQLite e PostgreSQL
         enum: NivelAcesso,
         default: NivelAcesso.VISUALIZACAO
     })
     nivelAcesso!: NivelAcesso;
+
     tarefas: any;
 }

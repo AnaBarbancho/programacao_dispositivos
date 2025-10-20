@@ -13,7 +13,7 @@ export class Tarefa {
     descricao?: string;
 
     @Column({
-        type: "enum",
+        type: "simple-enum", // compatível com SQLite e PostgreSQL
         enum: ["pendente", "andamento", "concluida"],
         default: "pendente"
     })
