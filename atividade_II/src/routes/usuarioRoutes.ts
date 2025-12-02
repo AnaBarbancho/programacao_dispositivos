@@ -1,16 +1,30 @@
 import { Router, Response } from "express";
-import jwt from "jsonwebtoken";
-import { UsuarioService } from "../services/UsuarioService";
-import { autenticarToken, autorizarNivel, AuthRequest } from "../middleware/auth";
+import { ServiceFactory } from "../patterns/factory/ServiceFactory";
+import { authFacade, AuthRequest } from "../patterns/facade/AuthFacade";
+import { ValidatorFactory } from "../patterns/strategy/ValidationStrategy";
 import { NivelAcesso } from "../entities/Usuario";
-import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/jwt";
 
 const router = Router();
-const usuarioService = new UsuarioService();
+// Usando Factory Pattern para criar o service
+const usuarioService = ServiceFactory.createUsuarioService();
 
 // POST /registro - Criar usuário (público)
 router.post("/registro", async (req, res: Response) => {
     try {
+        // Usando Strategy Pattern para validação
+        const usernameValidator = ValidatorFactory.createUsernameValidator();
+        const passwordValidator = ValidatorFactory.createPasswordValidator();
+
+        const usernameValidation = usernameValidator.validate(req.body.username);
+        if (!usernameValidation.isValid) {
+            return res.status(400).json({ msg: usernameValidation.error });
+        }
+
+        const passwordValidation = passwordValidator.validate(req.body.senha);
+        if (!passwordValidation.isValid) {
+            return res.status(400).json({ msg: passwordValidation.error });
+        }
+
         const { usuario, secret2FA } = await usuarioService.criarUsuario(req.body);
         res.status(201).json({ msg: "Usuário criado com sucesso", usuario, secret2FA });
     } catch (error: any) {
@@ -22,29 +36,27 @@ router.post("/registro", async (req, res: Response) => {
 router.post("/login", async (req, res: Response) => {
     try {
         const { username, senha, token2FA } = req.body;
-        const usuario = await usuarioService.autenticarUsuario(username, senha, token2FA);
 
-        const tokenJWT = jwt.sign(
-            {
-                id: usuario.id,
-                username: usuario.username,
-                nivelAcesso: usuario.nivelAcesso,
-            },
-            JWT_SECRET,
-            { expiresIn: JWT_EXPIRES_IN }
-        );
+        // Usando Strategy Pattern para validação do token 2FA
+        const token2FAValidator = ValidatorFactory.createToken2FAValidator();
+        const tokenValidation = token2FAValidator.validate(token2FA);
+        if (!tokenValidation.isValid) {
+            return res.status(400).json({ msg: tokenValidation.error });
+        }
 
-        res.json({ token: tokenJWT });
+        // Usando Facade Pattern para simplificar autenticação
+        const token = await authFacade.login(username, senha, token2FA);
+        res.json({ token });
     } catch (error: any) {
         res.status(401).json({ msg: error.message });
     }
 });
 
 // GET /usuarios - Listar todos os usuários (apenas admin)
+// Usando Facade Pattern para autenticação e autorização
 router.get(
     "/usuarios",
-    autenticarToken,
-    autorizarNivel(NivelAcesso.ADMINISTRATIVO),
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO),
     async (req: AuthRequest, res: Response) => {
         try {
             const usuarios = await usuarioService.listarUsuarios();
@@ -56,9 +68,10 @@ router.get(
 );
 
 // GET /usuarios/:id - Buscar usuário por ID (apenas admin ou próprio usuário)
+// Usando Facade Pattern para autenticação
 router.get(
     "/usuarios/:id",
-    autenticarToken,
+    authFacade.authenticate(),
     async (req: AuthRequest, res: Response) => {
         try {
             const id = parseInt(req.params.id);
@@ -83,9 +96,10 @@ router.get(
 );
 
 // PUT /usuarios/:id - Atualizar usuário (apenas admin ou próprio usuário)
+// Usando Facade Pattern para autenticação
 router.put(
     "/usuarios/:id",
-    autenticarToken,
+    authFacade.authenticate(),
     async (req: AuthRequest, res: Response) => {
         try {
             const id = parseInt(req.params.id);
@@ -114,10 +128,10 @@ router.put(
 );
 
 // DELETE /usuarios/:id - Deletar usuário (apenas admin)
+// Usando Facade Pattern para autenticação e autorização
 router.delete(
     "/usuarios/:id",
-    autenticarToken,
-    autorizarNivel(NivelAcesso.ADMINISTRATIVO),
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO),
     async (req: AuthRequest, res: Response) => {
         try {
             const id = parseInt(req.params.id);
@@ -133,4 +147,5 @@ router.delete(
 );
 
 export default router;
+
 

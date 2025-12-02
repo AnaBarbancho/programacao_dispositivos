@@ -39,3 +39,4 @@ export function autorizarNivel(...niveisPermitidos: NivelAcesso[]) {
     };
 }
 
+

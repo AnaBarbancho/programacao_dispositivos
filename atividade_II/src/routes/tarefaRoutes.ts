@@ -1,13 +1,15 @@
 import { Router, Response } from "express";
-import { TarefaService } from "../services/TarefaService";
-import { autenticarToken, autorizarNivel, AuthRequest } from "../middleware/auth";
+import { ServiceFactory } from "../patterns/factory/ServiceFactory";
+import { authFacade, AuthRequest } from "../patterns/facade/AuthFacade";
 import { NivelAcesso } from "../entities/Usuario";
 
 const router = Router();
-const tarefaService = new TarefaService();
+// Usando Factory Pattern para criar o service
+const tarefaService = ServiceFactory.createTarefaService();
 
 // GET /tarefas - Listar tarefas do usuário
-router.get("/tarefas", autenticarToken, async (req: AuthRequest, res: Response) => {
+// Usando Facade Pattern para autenticação
+router.get("/tarefas", authFacade.authenticate(), async (req: AuthRequest, res: Response) => {
     try {
         const tarefas = await tarefaService.listarTarefasPorUsuario(req.user!.id);
         res.json(tarefas);
@@ -17,10 +19,10 @@ router.get("/tarefas", autenticarToken, async (req: AuthRequest, res: Response) 
 });
 
 // POST /tarefas - Criar tarefa (gerencial ou administrativo)
+// Usando Facade Pattern para autenticação e autorização
 router.post(
     "/tarefas",
-    autenticarToken,
-    autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
     async (req: AuthRequest, res: Response) => {
         try {
             const tarefa = await tarefaService.criarTarefa(req.user!.id, req.body);
@@ -32,10 +34,10 @@ router.post(
 );
 
 // PUT /tarefas/:id - Atualizar tarefa (gerencial ou administrativo)
+// Usando Facade Pattern para autenticação e autorização
 router.put(
     "/tarefas/:id",
-    autenticarToken,
-    autorizarNivel(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO, NivelAcesso.GERENCIAL),
     async (req: AuthRequest, res: Response) => {
         try {
             const id = parseInt(req.params.id);
@@ -51,10 +53,10 @@ router.put(
 );
 
 // DELETE /tarefas/:id - Deletar tarefa (apenas administrativo)
+// Usando Facade Pattern para autenticação e autorização
 router.delete(
     "/tarefas/:id",
-    autenticarToken,
-    autorizarNivel(NivelAcesso.ADMINISTRATIVO),
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO),
     async (req: AuthRequest, res: Response) => {
         try {
             const id = parseInt(req.params.id);
@@ -70,4 +72,5 @@ router.delete(
 );
 
 export default router;
+
 

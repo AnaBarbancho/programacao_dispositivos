@@ -23,3 +23,4 @@ export interface UsuarioResponseDTO {
     // Não incluir senhaHash nem secret2FA por segurança
 }
 
+
