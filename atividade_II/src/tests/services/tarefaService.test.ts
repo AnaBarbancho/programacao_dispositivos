@@ -157,5 +157,158 @@ describe("TarefaService", () => {
             );
         });
     });
+
+    // TDD: Novo recurso - Filtrar tarefas por status
+    // RED: Escrevendo o teste ANTES da implementação
+    describe("listarTarefasPorUsuarioEStatus - TDD", () => {
+        it("deve filtrar tarefas por status 'pendente'", async () => {
+            // Criar tarefas com diferentes status
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa pendente 1",
+                status: "pendente"
+            });
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa em andamento",
+                status: "andamento"
+            });
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa pendente 2",
+                status: "pendente"
+            });
+
+            // Filtrar por status pendente
+            const tarefasPendentes = await tarefaService.listarTarefasPorUsuarioEStatus(
+                usuarioId,
+                "pendente"
+            );
+
+            expect(tarefasPendentes).toHaveLength(2);
+            tarefasPendentes.forEach(tarefa => {
+                expect(tarefa.status).toBe("pendente");
+            });
+        });
+
+        it("deve filtrar tarefas por status 'concluida'", async () => {
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa concluída 1",
+                status: "concluida"
+            });
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa pendente",
+                status: "pendente"
+            });
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa concluída 2",
+                status: "concluida"
+            });
+
+            const tarefasConcluidas = await tarefaService.listarTarefasPorUsuarioEStatus(
+                usuarioId,
+                "concluida"
+            );
+
+            expect(tarefasConcluidas).toHaveLength(2);
+            tarefasConcluidas.forEach(tarefa => {
+                expect(tarefa.status).toBe("concluida");
+            });
+        });
+
+        it("deve filtrar tarefas por status 'andamento'", async () => {
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa em andamento",
+                status: "andamento"
+            });
+
+            const tarefasAndamento = await tarefaService.listarTarefasPorUsuarioEStatus(
+                usuarioId,
+                "andamento"
+            );
+
+            expect(tarefasAndamento).toHaveLength(1);
+            expect(tarefasAndamento[0].status).toBe("andamento");
+        });
+
+        it("deve retornar array vazio quando não há tarefas com o status especificado", async () => {
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa pendente",
+                status: "pendente"
+            });
+
+            const tarefasConcluidas = await tarefaService.listarTarefasPorUsuarioEStatus(
+                usuarioId,
+                "concluida"
+            );
+
+            expect(tarefasConcluidas).toHaveLength(0);
+        });
+
+        it("deve retornar apenas tarefas do usuário especificado", async () => {
+            // Criar outro usuário
+            const { usuario: outroUsuario } = await usuarioService.criarUsuario({
+                username: "outrouser",
+                senha: "senha123"
+            });
+
+            // Criar tarefas para cada usuário
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Minha tarefa",
+                status: "pendente"
+            });
+            await tarefaService.criarTarefa(outroUsuario.id, {
+                titulo: "Tarefa de outro usuário",
+                status: "pendente"
+            });
+
+            // Filtrar tarefas do primeiro usuário
+            const tarefas = await tarefaService.listarTarefasPorUsuarioEStatus(
+                usuarioId,
+                "pendente"
+            );
+
+            expect(tarefas).toHaveLength(1);
+            expect(tarefas[0].titulo).toBe("Minha tarefa");
+        });
+    });
+
+    // TDD: Novo recurso - Listar todas as tarefas
+    // RED: Escrevendo o teste ANTES da implementação
+    describe("listarTodasTarefas - TDD", () => {
+        it("deve listar todas as tarefas de todos os usuários", async () => {
+            // Criar outro usuário
+            const { usuario: outroUsuario } = await usuarioService.criarUsuario({
+                username: "outrouser",
+                senha: "senha123"
+            });
+
+            // Criar tarefas para diferentes usuários
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Tarefa do usuário 1",
+                status: "pendente"
+            });
+            await tarefaService.criarTarefa(usuarioId, {
+                titulo: "Outra tarefa do usuário 1",
+                status: "andamento"
+            });
+            await tarefaService.criarTarefa(outroUsuario.id, {
+                titulo: "Tarefa do usuário 2",
+                status: "concluida"
+            });
+
+            // Listar todas as tarefas
+            const todasTarefas = await tarefaService.listarTodasTarefas();
+
+            expect(todasTarefas.length).toBeGreaterThanOrEqual(3);
+            // Verificar que contém tarefas de ambos os usuários
+            const titulos = todasTarefas.map(t => t.titulo);
+            expect(titulos).toContain("Tarefa do usuário 1");
+            expect(titulos).toContain("Outra tarefa do usuário 1");
+            expect(titulos).toContain("Tarefa do usuário 2");
+        });
+
+        it("deve retornar array vazio quando não há tarefas", async () => {
+            const todasTarefas = await tarefaService.listarTodasTarefas();
+            expect(todasTarefas).toHaveLength(0);
+        });
+    });
 });
 

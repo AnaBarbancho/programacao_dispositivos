@@ -8,29 +8,68 @@ const router = Router();
 // Usando Factory Pattern para criar o service
 const usuarioService = ServiceFactory.createUsuarioService();
 
-// POST /registro - Criar usuário (público)
-router.post("/registro", async (req, res: Response) => {
-    try {
-        // Usando Strategy Pattern para validação
-        const usernameValidator = ValidatorFactory.createUsernameValidator();
-        const passwordValidator = ValidatorFactory.createPasswordValidator();
+// POST /registro - Criar usuário (APENAS ADMIN)
+// Nota: fluxo público de registro foi removido. Apenas administradores autenticados
+// podem criar novos perfis — use POST /usuarios ou este endpoint autenticado.
+router.post(
+    "/registro",
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO),
+    async (req: AuthRequest, res: Response) => {
+        try {
+            console.log('Admin criando usuário, corpo recebido:', req.body);
+            // Usando Strategy Pattern para validação
+            const usernameValidator = ValidatorFactory.createUsernameValidator();
+            const passwordValidator = ValidatorFactory.createPasswordValidator();
 
-        const usernameValidation = usernameValidator.validate(req.body.username);
-        if (!usernameValidation.isValid) {
-            return res.status(400).json({ msg: usernameValidation.error });
+            const usernameValidation = usernameValidator.validate(req.body.username);
+            if (!usernameValidation.isValid) {
+                return res.status(400).json({ msg: usernameValidation.error });
+            }
+
+            const passwordValidation = passwordValidator.validate(req.body.senha);
+            if (!passwordValidation.isValid) {
+                return res.status(400).json({ msg: passwordValidation.error });
+            }
+
+            // Admin pode definir o nível de acesso
+            const { usuario, secret2FA } = await usuarioService.criarUsuario(req.body);
+            console.log('Usuário criado com sucesso (admin):', usuario.id, usuario.username);
+            // Retornar o secret2FA para que o admin possa fornecer ao novo usuário
+            res.status(201).json({ msg: "Usuário criado com sucesso", usuario, secret2FA });
+        } catch (error: any) {
+            res.status(400).json({ msg: error.message });
         }
-
-        const passwordValidation = passwordValidator.validate(req.body.senha);
-        if (!passwordValidation.isValid) {
-            return res.status(400).json({ msg: passwordValidation.error });
-        }
-
-        const { usuario, secret2FA } = await usuarioService.criarUsuario(req.body);
-        res.status(201).json({ msg: "Usuário criado com sucesso", usuario, secret2FA });
-    } catch (error: any) {
-        res.status(400).json({ msg: error.message });
     }
-});
+);
+
+// POST /usuarios - Criar usuário (apenas admin)
+router.post(
+    "/usuarios",
+    ...authFacade.requireAuth(NivelAcesso.ADMINISTRATIVO),
+    async (req: AuthRequest, res: Response) => {
+        try {
+            // Usando Strategy Pattern para validação
+            const usernameValidator = ValidatorFactory.createUsernameValidator();
+            const passwordValidator = ValidatorFactory.createPasswordValidator();
+
+            const usernameValidation = usernameValidator.validate(req.body.username);
+            if (!usernameValidation.isValid) {
+                return res.status(400).json({ msg: usernameValidation.error });
+            }
+
+            const passwordValidation = passwordValidator.validate(req.body.senha);
+            if (!passwordValidation.isValid) {
+                return res.status(400).json({ msg: passwordValidation.error });
+            }
+
+            // admin pode definir o nível de acesso desejado
+            const { usuario, secret2FA } = await usuarioService.criarUsuario(req.body);
+            res.status(201).json({ msg: "Usuário criado com sucesso", usuario, secret2FA });
+        } catch (error: any) {
+            res.status(400).json({ msg: error.message });
+        }
+    }
+);
 
 // POST /login - Autenticar usuário (público)
 router.post("/login", async (req, res: Response) => {

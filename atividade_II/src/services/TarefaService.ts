@@ -22,6 +22,27 @@ export class TarefaService {
         return tarefas.map(t => this.toResponseDTO(t));
     }
 
+    async listarTodasTarefas(): Promise<TarefaResponseDTO[]> {
+        const tarefas = await this.tarefaRepository.find({
+            relations: ["usuario"]
+        });
+        return tarefas.map(t => this.toResponseDTO(t));
+    }
+
+    async listarTarefasPorUsuarioEStatus(
+        usuarioId: number,
+        status: "pendente" | "andamento" | "concluida"
+    ): Promise<TarefaResponseDTO[]> {
+        const tarefas = await this.tarefaRepository.find({
+            where: {
+                usuario: { id: usuarioId },
+                status: status
+            },
+            relations: ["usuario"]
+        });
+        return tarefas.map(t => this.toResponseDTO(t));
+    }
+
     async buscarTarefaPorId(id: number, usuarioId: number): Promise<TarefaResponseDTO | null> {
         const tarefa = await this.tarefaRepository.findOne({
             where: { id, usuario: { id: usuarioId } },

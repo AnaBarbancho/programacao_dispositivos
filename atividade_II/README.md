@@ -19,6 +19,7 @@ Sistema completo de gerenciamento de tarefas com autenticação de dois fatores 
 - ✅ Interface Kanban com drag & drop
 - ✅ API RESTful completa
 - ✅ Testes unitários e de integração
+- ✅ **TDD (Test-Driven Development)** aplicado em todas as funcionalidades
 
 ## 🏗️ Design Patterns Utilizados
 
@@ -33,7 +34,42 @@ O Factory Pattern centraliza a criação de objetos (services), encapsulando a l
 
 **Problema Resolvido**:
 - **Antes**: Services eram criados diretamente nas rotas com `new UsuarioService()`, dificultando testes e injeção de dependências
+
+Exemplo (como estava):
+
+```typescript
+// src/routes/usuarioRoutes.ts (antes)
+import { Router } from 'express';
+import { UsuarioService } from '../services/UsuarioService';
+
+const router = Router();
+
+router.post('/registro', async (req, res) => {
+    // Instanciação direta impede injeção de datasource para testes
+    const usuarioService = new UsuarioService();
+    const usuario = await usuarioService.criarUsuario(req.body);
+    res.json(usuario);
+});
+```
+
 - **Depois**: Centralização da criação através da Factory, permitindo fácil substituição do DataSource para testes
+
+Exemplo (como está agora):
+
+```typescript
+// src/routes/usuarioRoutes.ts (agora)
+import { Router } from 'express';
+import { ServiceFactory } from '../patterns/factory/ServiceFactory';
+
+const router = Router();
+
+router.post('/registro', async (req, res) => {
+    // Cria service via factory (permite injetar DataSource em testes)
+    const usuarioService = ServiceFactory.createUsuarioService();
+    const usuario = await usuarioService.criarUsuario(req.body);
+    res.json(usuario);
+});
+```
 
 
 
@@ -57,6 +93,70 @@ O Facade Pattern fornece uma interface simplificada e unificada para o sistema c
 - **Antes**: Rotas precisavam usar múltiplos middlewares (`autenticarToken`, `autorizarNivel`) e gerar tokens manualmente com `jwt.sign()`, aumentando complexidade e duplicação de código
 - **Depois**: Interface única e simples através da Facade, reduzindo código nas rotas e centralizando lógica de autenticação
 
+Exemplo (como estava):
+
+```typescript
+// src/routes/usuarioRoutes.ts (antes)
+import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { UsuarioService } from '../services/UsuarioService';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
+
+const router = Router();
+
+router.post('/login', async (req: Request, res: Response) => {
+    const { username, senha, token2FA } = req.body;
+    const usuarioService = new UsuarioService();
+    const usuario = await usuarioService.autenticarUsuario(username, senha, token2FA);
+    const token = jwt.sign({ id: usuario.id, username: usuario.username, nivelAcesso: usuario.nivelAcesso }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    res.json({ token });
+});
+
+// rota protegida com middlewares separados
+function autenticarToken(req: any, res: Response, next: any) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ msg: 'Token não fornecido' });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.status(403).json({ msg: 'Token inválido' });
+    }
+}
+
+function autorizarNivel(allowedLevels: string[]) {
+    return (req: any, res: Response, next: any) => {
+        if (!allowedLevels.includes(req.user.nivelAcesso)) {
+            return res.status(403).json({ msg: 'Acesso negado' });
+        }
+        next();
+    };
+}
+```
+
+Exemplo (como está agora):
+
+```typescript
+// src/routes/usuarioRoutes.ts (agora)
+import { Router } from 'express';
+import { authFacade } from '../patterns/facade/AuthFacade';
+
+const router = Router();
+
+router.post('/login', async (req, res) => {
+    const { username, senha, token2FA } = req.body;
+    const token = await authFacade.login(username, senha, token2FA);
+    res.json({ token });
+});
+
+// rota protegida usando a facade
+router.get('/usuarios', authFacade.requireAuth(/* níveis permitidos */), (req, res) => {
+    // ...handler
+});
+```
+
 
 
 **Benefícios**:
@@ -78,6 +178,48 @@ O Strategy Pattern define uma família de algoritmos de validação, encapsula c
 **Problema Resolvido**:
 - **Antes**: Validações eram feitas inline nas rotas ou services, dificultando reutilização, testes e adição de novos tipos de validação
 - **Depois**: Cada tipo de validação é uma estratégia isolada, facilmente intercambiável e testável
+
+Exemplo (como estava):
+
+```typescript
+// src/routes/usuarioRoutes.ts (antes)
+import { Router } from 'express';
+
+const router = Router();
+
+router.post('/registro', async (req, res) => {
+    const { username, senha } = req.body;
+    // validação inline
+    if (!username || username.length < 3) return res.status(400).json({ msg: 'Username inválido' });
+    if (!senha || senha.length < 6) return res.status(400).json({ msg: 'Senha muito curta' });
+
+    // criar usuário...
+});
+```
+
+Exemplo (como está agora):
+
+```typescript
+// src/routes/usuarioRoutes.ts (agora)
+import { Router } from 'express';
+import { ValidatorFactory } from '../patterns/strategy/ValidationStrategy';
+
+const router = Router();
+
+router.post('/registro', async (req, res) => {
+    const { username, senha } = req.body;
+    const usernameValidator = ValidatorFactory.createUsernameValidator();
+    const passwordValidator = ValidatorFactory.createPasswordValidator(6, false, true);
+
+    const uRes = usernameValidator.validate(username);
+    if (!uRes.isValid) return res.status(400).json({ msg: uRes.error });
+
+    const pRes = passwordValidator.validate(senha);
+    if (!pRes.isValid) return res.status(400).json({ msg: pRes.error });
+
+    // criar usuário com validações aplicadas
+});
+```
 
 
 **Benefícios**:
@@ -106,6 +248,10 @@ src/
 └── tests/               # Testes
     ├── integration/     # Testes de integração
     ├── middleware/      # Testes de middleware
+    ├── patterns/        # Testes TDD dos Design Patterns
+    │   ├── factory/     # Testes Factory Pattern
+    │   ├── facade/      # Testes Facade Pattern
+    │   └── strategy/    # Testes Strategy Pattern
     └── services/        # Testes de services
 ```
 
@@ -121,7 +267,151 @@ O projeto possui:
 - ✅ Testes unitários de services
 - ✅ Testes de middleware
 - ✅ Testes de integração da API
+- ✅ Testes dos Design Patterns (Factory, Facade, Strategy)
 - ✅ Cobertura completa de funcionalidades
+
+### 🎯 Test-Driven Development (TDD)
+
+Este projeto utiliza **TDD (Test-Driven Development)** como metodologia de desenvolvimento. TDD é uma prática onde escrevemos os testes **antes** de implementar o código de produção, seguindo o ciclo **Red-Green-Refactor**.
+
+#### 📋 Ciclo TDD: Red-Green-Refactor
+
+O desenvolvimento segue três etapas cíclicas:
+
+1. **🔴 RED (Vermelho)** - Escrever um teste que falha
+   - Define o comportamento esperado
+   - O teste falha porque a funcionalidade ainda não existe
+
+2. **🟢 GREEN (Verde)** - Implementar código mínimo para o teste passar
+   - Foco em fazer o teste passar rapidamente
+   - Código pode não ser perfeito ainda
+
+3. **🔵 REFACTOR (Refatorar)** - Melhorar o código mantendo os testes passando
+   - Remove duplicação
+   - Melhora legibilidade e estrutura
+   - Mantém os testes verdes
+
+#### 💡 Exemplo Prático no Projeto
+
+##### Funcionalidade: Filtrar tarefas por status
+
+**🔴 Passo 1: RED - Escrever o teste primeiro**
+
+```typescript
+describe("listarTarefasPorUsuarioEStatus - TDD", () => {
+    it("deve filtrar tarefas por status 'pendente'", async () => {
+        // Criar tarefas com diferentes status
+        await tarefaService.criarTarefa(usuarioId, {
+            titulo: "Tarefa pendente 1",
+            status: "pendente"
+        });
+        await tarefaService.criarTarefa(usuarioId, {
+            titulo: "Tarefa em andamento",
+            status: "andamento"
+        });
+
+        // Filtrar por status pendente
+        const tarefasPendentes = await tarefaService.listarTarefasPorUsuarioEStatus(
+            usuarioId,
+            "pendente"
+        );
+
+        expect(tarefasPendentes).toHaveLength(2);
+        tarefasPendentes.forEach(tarefa => {
+            expect(tarefa.status).toBe("pendente");
+        });
+    });
+});
+```
+
+**Resultado**: ❌ Teste falha porque o método não existe ainda
+
+**🟢 Passo 2: GREEN - Implementar o código mínimo**
+
+```typescript
+async listarTarefasPorUsuarioEStatus(
+    usuarioId: number,
+    status: "pendente" | "andamento" | "concluida"
+): Promise<TarefaResponseDTO[]> {
+    const tarefas = await this.tarefaRepository.find({
+        where: {
+            usuario: { id: usuarioId },
+            status: status
+        },
+        relations: ["usuario"]
+    });
+    return tarefas.map(t => this.toResponseDTO(t));
+}
+```
+
+**Resultado**: ✅ Teste passa!
+
+**🔵 Passo 3: REFACTOR - Melhorar o código (se necessário)**
+
+Neste caso, o código já está limpo e eficiente, então não foi necessário refatorar.
+
+#### 📊 Cobertura TDD no Projeto
+
+O projeto aplica TDD nas seguintes áreas:
+
+- ✅ **Design Patterns**:
+  - `ServiceFactory` (`src/tests/patterns/factory/ServiceFactory.test.ts`)
+  - `AuthFacade` (`src/tests/patterns/facade/AuthFacade.test.ts`)
+  - `ValidationStrategy` (`src/tests/patterns/strategy/ValidationStrategy.test.ts`)
+
+- ✅ **Services**:
+  - `UsuarioService` (testes existentes)
+  - `TarefaService` (incluindo novo método com TDD: `listarTarefasPorUsuarioEStatus`)
+
+- ✅ **Middleware**:
+  - Autenticação e autorização
+
+- ✅ **Integração**:
+  - Testes end-to-end da API
+
+#### 🎓 Benefícios do TDD
+
+1. **Design melhor**: Forçar a pensar na interface antes da implementação
+2. **Documentação viva**: Os testes servem como documentação do comportamento esperado
+3. **Confiança**: Refatoração segura com rede de segurança de testes
+4. **Detecção precoce de bugs**: Problemas são encontrados antes mesmo do código ser escrito
+5. **Código testável**: O código fica naturalmente mais testável e desacoplado
+
+#### 📝 Estrutura de Testes
+
+```
+src/tests/
+├── patterns/
+│   ├── factory/
+│   │   └── ServiceFactory.test.ts      # TDD: Factory Pattern
+│   ├── facade/
+│   │   └── AuthFacade.test.ts          # TDD: Facade Pattern
+│   └── strategy/
+│       └── ValidationStrategy.test.ts  # TDD: Strategy Pattern
+├── services/
+│   ├── usuarioService.test.ts
+│   └── tarefaService.test.ts           # Inclui exemplo TDD completo
+├── middleware/
+│   └── auth.test.ts
+└── integration/
+    └── api.test.ts
+```
+
+#### 🚀 Executando Testes Específicos
+
+```bash
+# Executar todos os testes
+npm test
+
+# Executar testes em modo watch (desenvolvimento)
+npm run test:watch
+
+# Executar testes de um arquivo específico
+npm test -- tarefaService
+
+# Executar testes de padrões
+npm test -- patterns
+```
 
 ## 🚀 Como Executar
 
@@ -169,11 +459,6 @@ npx ts-node src/index.ts
 - **Gerencial**: Criar e editar tarefas
 - **Administrativo**: Acesso completo (incluindo deletar)
 
-## 📄 Licença
-
-ISC
-
----
 
 **Desenvolvido com TypeScript, Express e TypeORM**
 

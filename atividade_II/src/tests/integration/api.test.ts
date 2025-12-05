@@ -124,6 +124,7 @@ describe("API Integration Tests", () => {
         it("deve criar um novo usuário", async () => {
             const response = await request(app)
                 .post("/registro")
+                .set("Authorization", `Bearer ${adminToken}`)
                 .send({
                     username: "novousuario",
                     senha: "senha123",
@@ -138,6 +139,7 @@ describe("API Integration Tests", () => {
         it("deve retornar erro se usuário já existe", async () => {
             await request(app)
                 .post("/registro")
+                .set("Authorization", `Bearer ${adminToken}`)
                 .send({
                     username: "usuarioexistente",
                     senha: "senha123"
@@ -145,6 +147,7 @@ describe("API Integration Tests", () => {
 
             const response = await request(app)
                 .post("/registro")
+                .set("Authorization", `Bearer ${adminToken}`)
                 .send({
                     username: "usuarioexistente",
                     senha: "senha123"
@@ -261,6 +264,95 @@ describe("API Integration Tests", () => {
 
             expect(response.status).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
+        });
+
+        it("deve permitir visualização ver todas as tarefas", async () => {
+            // Criar tarefas para diferentes usuários
+            await request(app)
+                .post("/tarefas")
+                .set("Authorization", `Bearer ${gerencialToken}`)
+                .send({
+                    titulo: "Tarefa do gerencial",
+                    descricao: "Descrição",
+                    status: "pendente"
+                });
+
+            await request(app)
+                .post("/tarefas")
+                .set("Authorization", `Bearer ${adminToken}`)
+                .send({
+                    titulo: "Tarefa do admin",
+                    descricao: "Descrição",
+                    status: "andamento"
+                });
+
+            // Visualização deve ver todas as tarefas
+            const response = await request(app)
+                .get("/tarefas")
+                .set("Authorization", `Bearer ${visualizacaoToken}`);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBeGreaterThanOrEqual(2);
+            
+            // Verificar que contém tarefas de diferentes usuários
+            const titulos = response.body.map((t: any) => t.titulo);
+            expect(titulos).toContain("Tarefa do gerencial");
+            expect(titulos).toContain("Tarefa do admin");
+        });
+
+        it("deve permitir administrativo ver todas as tarefas", async () => {
+            // Criar tarefas para diferentes usuários
+            await request(app)
+                .post("/tarefas")
+                .set("Authorization", `Bearer ${gerencialToken}`)
+                .send({
+                    titulo: "Tarefa do gerencial para admin",
+                    status: "pendente"
+                });
+
+            // Admin deve ver todas as tarefas
+            const response = await request(app)
+                .get("/tarefas")
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+        });
+
+        it("deve permitir gerencial ver todas as tarefas (política atual)", async () => {
+            // Limpar tarefas anteriores
+            await TestDataSource.getRepository(Tarefa).clear();
+
+            // Criar tarefa do gerencial
+            await request(app)
+                .post("/tarefas")
+                .set("Authorization", `Bearer ${gerencialToken}`)
+                .send({
+                    titulo: "Minha tarefa gerencial",
+                    status: "pendente"
+                });
+
+            // Criar tarefa do admin
+            await request(app)
+                .post("/tarefas")
+                .set("Authorization", `Bearer ${adminToken}`)
+                .send({
+                    titulo: "Tarefa do admin",
+                    status: "pendente"
+                });
+
+            // Gerencial deve ver apenas suas tarefas
+            const response = await request(app)
+                .get("/tarefas")
+                .set("Authorization", `Bearer ${gerencialToken}`);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            // Com a política atual, o gerencial vê todas as tarefas
+            const titulos = response.body.map((t: any) => t.titulo);
+            expect(titulos).toContain("Minha tarefa gerencial");
+            expect(titulos).toContain("Tarefa do admin");
         });
 
         it("deve negar acesso sem token", async () => {

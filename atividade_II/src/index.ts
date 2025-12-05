@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import path from "path";
+import swaggerDocument from "./swagger";
 import { AppDataSource } from "./data-source";
 import usuarioRoutes from "./routes/usuarioRoutes";
 import tarefaRoutes from "./routes/tarefaRoutes";
@@ -18,6 +19,8 @@ app.use("/static", express.static(path.join(__dirname, "../static")));
 app.get("/", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, "../static/index.html"));
 });
+
+
 
 // Conectar ao banco
 AppDataSource.initialize()
